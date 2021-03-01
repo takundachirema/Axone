@@ -33,7 +33,8 @@ contract AxoneManager is Initializable {
         userManager = IUserManager(_userManager);
         revenueManager = IRevenueManager(_revenueManager);
         assetManager = IAssetManager(_assetManager);
-        //revenueManager.setAssetManager(_assetManager);
+        revenueManager.setAssetManager(_assetManager);
+        assetManager.setRevenueManager(_revenueManager);
     }
 
     function setOwner(address _owner) public {

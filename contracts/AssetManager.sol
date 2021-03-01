@@ -6,10 +6,13 @@ import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./libraries/SharedStructs.sol";
+import "./interfaces/IRevenueManager.sol";
 
 contract AssetManager is Initializable {
 
     using SafeMath for uint256;
+
+    IRevenueManager private revenueManager;
 
     enum PricingStrategy { PrivateAuction, FixedRate, PrivateAuctionHarberger }
 
@@ -26,6 +29,10 @@ contract AssetManager is Initializable {
         _;
     }
     
+    function setRevenueManager(address _revenueManager) public onlyRegistry {
+        revenueManager = IRevenueManager(_revenueManager);
+    }
+
     function initialize(address _axonRegistry) public initializer {
         registry = _axonRegistry;
         maxDepth = 3;
@@ -49,20 +56,22 @@ contract AssetManager is Initializable {
         require(parents.length == parents_weights.length, "Each parent must have a corresponding weight.");
 
         uint256[] memory children;
-        uint8[] memory children_weights;
         uint256 assetId = assets.length + 1;
         SharedStructs.Asset memory asset = SharedStructs.Asset(
             assetId, 
             asset_uri, 
             parents, 
-            children, 
-            parents_weights,
-            children_weights,
+            children,
             owner_id, 
             0,
             0,
             0,
             0
+        );
+
+        revenueManager.createAccount(
+            assetId,
+            parents_weights
         );
 
         assets.push(asset);
@@ -73,7 +82,7 @@ contract AssetManager is Initializable {
 
             if (parent_id > 0 && parent_id <= assets.length){
                 assets[parent_id - 1].children.push(assetId);
-                assets[parent_id - 1].children_weights.push(parents_weights[i]);
+                revenueManager.setChildWeight(parent_id, parents_weights[i]);
             }
         }
 
@@ -81,8 +90,8 @@ contract AssetManager is Initializable {
         if (child_id > 0 && child_id <= assets.length){
             assets[assetId - 1].children.push(child_id);
             assets[child_id - 1].parents.push(assetId);
-            assets[assetId - 1].children_weights.push(child_weight);
-            assets[child_id - 1].parents_weights.push(child_weight);
+            revenueManager.setChildWeight(assetId, child_weight);
+            revenueManager.setParentWeight(child_id, child_weight);
         }
 
         return assetId;
@@ -107,13 +116,16 @@ contract AssetManager is Initializable {
     {
         require(asset_id > 0 && assets.length >= asset_id, "SharedStructs.Asset does not exist");
         SharedStructs.Asset memory asset = assets[asset_id - 1];
+
+        SharedStructs.RevenueAccount memory account = revenueManager.getRevenueAccount(asset_id);
+
         return (
             asset.asset_id,
             asset.asset_uri,
             asset.parents,
             asset.children,
-            asset.parents_weights,
-            asset.children_weights,
+            account.parents_weights,
+            account.children_weights,
             asset.owner_id,
             asset.sell_price,
             asset.revenue,
@@ -135,6 +147,16 @@ contract AssetManager is Initializable {
         }
 
         return results;
+    }
+
+    function getChildrenIds(uint256 asset_id) public view returns (uint256[] memory) {
+        require(asset_id <= assets.length, "Asset not found");
+        return assets[asset_id].children;
+    }
+
+    function getParentIds(uint256 asset_id) public view returns (uint256[] memory) {
+        require(asset_id <= assets.length, "Asset not found");
+        return assets[asset_id].parents;
     }
 
     function getAssets() public view returns (SharedStructs.Asset[] memory) {

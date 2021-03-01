@@ -66,7 +66,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
         assetManager = await AssetManager.new()
         assetManager.initialize(axoneManager.address)
 
-        revenueManager = await UserManager.new()
+        revenueManager = await RevenueManager.new()
         revenueManager.initialize(axoneManager.address)
 
         await axoneManager.initialize(
@@ -183,7 +183,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             });
 
             txn = await axoneManager.createAsset(
-                asset_uri_3,[asset_id_2],[10],0,0,
+                asset_uri_3,[asset_id_2],[0],0,0,
                 {from: owner_2}
             );
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -192,7 +192,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             });
 
             txn = await axoneManager.createAsset(
-                asset_uri_4,[asset_id_3],[10],0,0,
+                asset_uri_4,[asset_id_3],[0],0,0,
                 {from: owner_2}
             );
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -240,12 +240,13 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             let asset_1 = await axoneManager.getAsset.call(
                 asset_id_1
             );
-            //console.log(JSON.stringify(asset_1))
+            //console.log(JSON.stringify(asset_1[5]))
             assert.equal(asset_1[0].toNumber(), 1, "Incorrect id for asset 1")
             assert.equal(asset_1[1], asset_uri_1, "Incorrect uri for asset 1")
             assert.equal(asset_1[2].length, 0, "Incorrect parents length for asset 1")
             assert.equal(asset_1[3].length, 3, "Incorrect children length for asset 1")
             assert.equal(asset_1[3][0], 2, "Incorrect child id for asset 1")
+            assert.equal(asset_1[5][0], 0, "Incorrect child weight for asset 1")
             assert.equal(asset_1[6].toNumber(), owner_id_2, "Incorrect owner_1 id for asset 1")
 
             let asset_2 = await axoneManager.getAsset.call(
@@ -257,6 +258,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             assert.equal(asset_2[2].length, 1, "Incorrect parents length for asset 2")
             assert.equal(asset_2[3].length, 1, "Incorrect children length for asset 2")
             assert.equal(asset_2[3][0], 3, "Incorrect child id for asset 2")
+            assert.equal(asset_2[5][0], 0, "Incorrect child weight for asset 2")
             assert.equal(asset_2[6].toNumber(), owner_id_2, "Incorrect owner id for asset 2")
 
             let asset_3 = await axoneManager.getAsset.call(
@@ -268,6 +270,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             assert.equal(asset_3[2].length, 2, "Incorrect parents length for asset 3")
             assert.equal(asset_3[3].length, 2, "Incorrect children length for asset 3")
             assert.equal(asset_3[3][0], 4, "Incorrect child id for asset 3")
+            assert.equal(asset_3[5][0], 0, "Incorrect child weight for asset 3")
             assert.equal(asset_3[6].toNumber(), owner_id_2, "Incorrect owner id for asset 3")
 
             let asset_4 = await axoneManager.getAsset.call(
@@ -278,6 +281,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             assert.equal(asset_4[1], asset_uri_4, "Incorrect uri for asset 4")
             assert.equal(asset_4[2].length, 2, "Incorrect parents length for asset 4")
             assert.equal(asset_4[3].length, 0, "Incorrect children length for asset 4")
+            assert.equal(asset_4[4][0], 0, "Incorrect parent weight for asset 4")
             assert.equal(asset_4[6].toNumber(), owner_id_2, "Incorrect owner id for asset 4")
 
             let asset_5 = await axoneManager.getAsset.call(
@@ -289,6 +293,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             assert.equal(asset_5[2].length, 1, "Incorrect parents length for asset 5")
             assert.equal(asset_5[3].length, 1, "Incorrect children length for asset 5")
             assert.equal(asset_5[3][0], 3, "Incorrect child id for asset 5")
+            assert.equal(asset_5[4][0], 10, "Incorrect parent weight for asset 5")
             assert.equal(asset_5[6].toNumber(), owner_id_3, "Incorrect owner id for asset 5")
 
             let asset_6 = await axoneManager.getAsset.call(
@@ -300,6 +305,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             assert.equal(asset_6[2].length, 1, "Incorrect parents length for asset 6")
             assert.equal(asset_6[3].length, 1, "Incorrect children length for asset 6")
             assert.equal(asset_6[3][0], 7, "Incorrect child id for asset 6")
+            assert.equal(asset_6[4][0], 10, "Incorrect parent weight for asset 6")
             assert.equal(asset_6[6].toNumber(), owner_id_4, "Incorrect owner id for asset 6")
         
             let asset_7 = await axoneManager.getAsset.call(
@@ -311,6 +317,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             assert.equal(asset_7[2].length, 2, "Incorrect parents length for asset 7")
             assert.equal(asset_7[3].length, 1, "Incorrect children length for asset 7")
             assert.equal(asset_7[3][0], 8, "Incorrect child id for asset 7")
+            assert.equal(asset_7[4][0], 10, "Incorrect parent weight for asset 7")
             assert.equal(asset_7[6].toNumber(), owner_id_5, "Incorrect owner id for asset 7")
 
             let asset_8 = await axoneManager.getAsset.call(
@@ -322,6 +329,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             assert.equal(asset_8[2].length, 1, "Incorrect parents length for asset 8")
             assert.equal(asset_8[3].length, 1, "Incorrect children length for asset 8")
             assert.equal(asset_8[3][0], 4, "Incorrect child id for asset 8")
+            assert.equal(asset_8[4][0], 10, "Incorrect parent weight for asset 8")
             assert.equal(asset_8[6].toNumber(), owner_id_6, "Incorrect owner id for asset 8")
         })
 

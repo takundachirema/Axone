@@ -18,12 +18,19 @@ interface IAssetManager {
     )   external 
         returns (uint256);
 
+    function setRevenueManager(address _revenueManager) external;
+
     function getOwnerId(uint256 asset_Id)
         external
         view
         returns (uint256);
 
-    function getAssets(uint256 asset_Id) 
+    function getChildrenIds(uint256 asset_id) 
+        external 
+        view
+        returns (uint256[] memory);
+    
+    function getParentIds(uint256 asset_id) 
         external 
         view
         returns (uint256[] memory, uint256[] memory);
