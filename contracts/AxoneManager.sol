@@ -21,7 +21,7 @@ contract AxoneManager is Initializable {
     IAssetManager private assetManager;
 
     event NewAsset(uint256 asset_id, uint256 indexed owner_id, string asset_uri);
-    event UseAsset(uint256 asset_id, bool use);
+    event PayForAssetUse(uint256 asset_id, bool use);
 
     function initialize(
         address _userManager,
@@ -50,6 +50,7 @@ contract AxoneManager is Initializable {
     function createAsset
     (
         string memory asset_uri,
+        uint256 asset_usage_price,
         uint256[] memory parents_ids, 
         uint8[] memory parents_weights, 
         uint256 child_id,
@@ -60,6 +61,7 @@ contract AxoneManager is Initializable {
         uint256 assetId = assetManager.createAsset(
             asset_uri, 
             owner_id, 
+            asset_usage_price,
             parents_ids, 
             parents_weights,
             child_id, 
@@ -108,11 +110,11 @@ contract AxoneManager is Initializable {
         return (assetManager.getAsset(asset_Id));
     }
 
-    function useAsset(uint256 asset_id) external payable {
-        require(msg.value > 0, "No payment received for asset use.");
-        assetManager.useAsset(asset_id, msg.value);
-        emit UseAsset(asset_id, true);
-    }
+    // function payForAsset(uint256 asset_id) external payable {
+    //     require(msg.value > 0, "No payment received for asset use.");
+    //     revenueManager.payForAsset(asset_id, msg.value);
+    //     emit PayForAssetUse(asset_id, true);
+    // }
 
     function getCallerId() public view returns (uint256) {
         uint256 callerId = userManager.getUserId(msg.sender);

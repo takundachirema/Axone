@@ -22,6 +22,7 @@ library SharedStructs {
         uint256[] children_payments;
         uint256[] parents_receipts;
         uint256[] children_receipts;
+        uint256 usage_price; // the price that must be paid to use the asset
         uint256 revenue; // undistributed revenue
         uint256 total_revenue;
     }

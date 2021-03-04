@@ -7,12 +7,14 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./libraries/SharedStructs.sol";
 import "./interfaces/IRevenueManager.sol";
+import "./interfaces/IUserManager.sol";
 
 contract AssetManager is Initializable {
 
     using SafeMath for uint256;
 
     IRevenueManager private revenueManager;
+    IUserManager private userManager;
 
     enum PricingStrategy { PrivateAuction, FixedRate, PrivateAuctionHarberger }
 
@@ -33,6 +35,10 @@ contract AssetManager is Initializable {
         revenueManager = IRevenueManager(_revenueManager);
     }
 
+    function setUserManager(address _userManager) public onlyRegistry {
+        userManager = IUserManager(_userManager);
+    }
+
     function initialize(address _axonRegistry) public initializer {
         registry = _axonRegistry;
         maxDepth = 3;
@@ -46,6 +52,7 @@ contract AssetManager is Initializable {
     (
         string memory asset_uri, 
         uint256 owner_id,
+        uint256 asset_usage_price,
         uint256[] memory parents, 
         uint8[] memory parents_weights, 
         uint256 child_id,
@@ -71,7 +78,8 @@ contract AssetManager is Initializable {
 
         revenueManager.createAccount(
             assetId,
-            parents_weights
+            parents_weights,
+            asset_usage_price
         );
 
         assets.push(asset);
@@ -128,8 +136,8 @@ contract AssetManager is Initializable {
             account.children_weights,
             asset.owner_id,
             asset.sell_price,
-            asset.revenue,
-            asset.total_revenue,
+            account.revenue,
+            account.total_revenue,
             asset.pricing_strategy
         );
     }
@@ -197,6 +205,11 @@ contract AssetManager is Initializable {
 
     function getOwnerId(uint256 _asset_id) public view returns (uint256) {
         return assets[_asset_id].owner_id;
+    }
+
+    function getOwnerAddress(uint256 _asset_id) public view returns (address) {
+        uint256 ownerId = assets[_asset_id].owner_id;
+        return userManager.getUserAddress(ownerId);
     }
 
     function getAssetLength() public view returns (uint256) {

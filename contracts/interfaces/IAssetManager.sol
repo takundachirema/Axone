@@ -11,6 +11,7 @@ interface IAssetManager {
     (
         string calldata asset_uri, 
         uint256 owner_id,
+        uint256 asset_usage_price,
         uint256[] calldata parents, 
         uint8[] calldata parents_weights, 
         uint256 child,
@@ -24,6 +25,11 @@ interface IAssetManager {
         external
         view
         returns (uint256);
+    
+    function getOwnerAddress(uint256 asset_Id)
+        external
+            view
+            returns (address);
 
     function getChildrenIds(uint256 asset_id) 
         external 

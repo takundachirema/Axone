@@ -145,7 +145,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
     })
     context("Asset Management ‍📚", function () {
         it("Can create a valid asset", async () => {
-            let txn = await axoneManager.createAsset(asset_uri_1,[],[],0,0,{
+            let txn = await axoneManager.createAsset(asset_uri_1,0,[],[],0,0,{
                 from: owner_2
             });
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -158,23 +158,33 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
     context("Asset Management: Reject on negative input 🙅‍♂️‍", function () {
         it("Reverts if invalid asset: input non-registered user", async () => {
             await expectRevert.unspecified(
-                axoneManager.createAsset.call(asset_uri_1,[],[],0,0,{
+                axoneManager.createAsset.call(asset_uri_1,0,[],[],0,0,{
                     from: randomAddress
                 })
             )
         })
         it("Reverts if invalid asset: input URI too short", async () => {
             await expectRevert.unspecified(
-                axoneManager.createAsset.call("",[],[],0,0,{
+                axoneManager.createAsset.call("",0,[],[],0,0,{
                     from: randomAddress
                 })
             )
         })
     })
-    context("Asset Management: retrieve asset information 🔎", function () {
+    context("Asset Management: add assets 🔎", function () {
+        /****** 
+         *    -------5-----  
+         *   /             \
+         *  /               \
+         *  1--------2-------3---------------4
+         *  \                 \             /
+         *   \                 \_____7_____8
+         *    \                /
+         *     -------6-------
+        *****/
         it("Can add assets", async () => {
             let txn = await axoneManager.createAsset(
-                asset_uri_2,[asset_id_1],[0],10,0,
+                asset_uri_2,0,[asset_id_1],[0],10,0,
                 {from: owner_2}
             );
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -183,7 +193,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             });
 
             txn = await axoneManager.createAsset(
-                asset_uri_3,[asset_id_2],[0],0,0,
+                asset_uri_3,0,[asset_id_2],[0],0,0,
                 {from: owner_2}
             );
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -192,7 +202,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             });
 
             txn = await axoneManager.createAsset(
-                asset_uri_4,[asset_id_3],[0],0,0,
+                asset_uri_4,0,[asset_id_3],[0],0,0,
                 {from: owner_2}
             );
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -201,7 +211,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             });
 
             txn = await axoneManager.createAsset(
-                asset_uri_5,[asset_id_1],[10],asset_id_3,0,
+                asset_uri_5,0,[asset_id_1],[10],asset_id_3,0,
                 {from: owner_3}
             );
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -210,7 +220,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             });
 
             txn = await axoneManager.createAsset(
-                asset_uri_6,[asset_id_1],[10],0,0,
+                asset_uri_6,0,[asset_id_1],[10],0,0,
                 {from: owner_4}
             );
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -219,7 +229,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             });
 
             txn = await axoneManager.createAsset(
-                asset_uri_7,[asset_id_3,asset_id_6],[10,10],0,0,
+                asset_uri_7,0,[asset_id_3,asset_id_6],[10,10],0,0,
                 {from: owner_5}
             );
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -228,7 +238,7 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             });
 
             txn = await axoneManager.createAsset(
-                asset_uri_8,[asset_id_7],[10],asset_id_4,0,
+                asset_uri_8,0,[asset_id_7],[10],asset_id_4,0,
                 {from: owner_6}
             );
             truffleAssert.eventEmitted(txn, 'NewAsset', (ev) => {
@@ -333,11 +343,64 @@ contract("Axone Registry Full system test 🧪🔬", (accounts) => {
             assert.equal(asset_8[6].toNumber(), owner_id_6, "Incorrect owner id for asset 8")
         })
 
-        it("Correctly get asset children", async () => {
+        it("Correctly pay for asset", async () => {
+            txn = await revenueManager.payForAssetUse(
+                asset_id_1,
+                {
+                    from: randomAddress,
+                    value: 50
+                }
+            );
+            txn = await revenueManager.payForAssetUse(
+                asset_id_1,
+                {
+                    from: randomAddress,
+                    value: 70
+                }
+            );
+            let asset_1 = await axoneManager.getAsset.call(
+                asset_id_1
+            );
+            let balance = await web3.eth.getBalance(revenueManager.address)
+            
+            assert.equal(asset_1[8].toNumber(), 100, "Incorrect revenue for asset 1")
+            assert.equal(asset_1[9].toNumber(), 100, "Incorrect total revenue for asset 1")
+            assert.equal(balance, 100, "Incorrect ether in revenue manager")
 
+            txn = await revenueManager.payForAssetUse(
+                asset_id_5,
+                {
+                    from: randomAddress,
+                    value: 50
+                }
+            );
+            let asset_5 = await axoneManager.getAsset.call(
+                asset_id_5
+            );
+            balance = await web3.eth.getBalance(revenueManager.address)
+            
+            assert.equal(asset_5[8].toNumber(), 50, "Incorrect revenue for asset 5")
+            assert.equal(asset_5[9].toNumber(), 50, "Incorrect total revenue for asset 5")
+            assert.equal(balance, 150, "Incorrect ether in revenue manager")
+
+            txn = await revenueManager.payForAssetUse(
+                asset_id_7,
+                {
+                    from: randomAddress,
+                    value: 50
+                }
+            );
+            let asset_7 = await axoneManager.getAsset.call(
+                asset_id_7
+            );
+            balance = await web3.eth.getBalance(revenueManager.address)
+            
+            assert.equal(asset_7[8].toNumber(), 50, "Incorrect revenue for asset 7")
+            assert.equal(asset_7[9].toNumber(), 50, "Incorrect total revenue for asset 7")
+            assert.equal(balance, 200, "Incorrect ether in revenue manager")
         })
 
-        it("Correctly get asset information", async () => {
+        it("Correctly pay royalties", async () => {
             
         })
     })
