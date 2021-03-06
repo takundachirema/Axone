@@ -16,14 +16,23 @@ library SharedStructs {
 
     struct RevenueAccount {
         uint256 asset_id;
-        uint8[] parents_weights; // it's in percentage form. Ranges from 0 to 100
+        uint256 usage_price; // the price that must be paid to use the asset
+        uint256 revenue; // undistributed revenue
+        uint256 net_revenue;
+        uint256 gross_revenue;
+    }
+
+    struct RevenueAccountDetails {
+        uint256 asset_id;
+        uint256 usage_price; // the price that must be paid to use the asset
+        uint256 revenue; // undistributed revenue
+        uint256 net_revenue;
+        uint256 gross_revenue;
+        uint8[] parents_weights; 
         uint8[] children_weights;
         uint256[] parents_payments;
         uint256[] children_payments;
         uint256[] parents_receipts;
         uint256[] children_receipts;
-        uint256 usage_price; // the price that must be paid to use the asset
-        uint256 revenue; // undistributed revenue
-        uint256 total_revenue;
     }
 }

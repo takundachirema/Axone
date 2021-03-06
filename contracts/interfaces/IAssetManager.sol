@@ -12,14 +12,16 @@ interface IAssetManager {
         string calldata asset_uri, 
         uint256 owner_id,
         uint256 asset_usage_price,
-        uint256[] calldata parents, 
+        uint256[] calldata parents_ids, 
         uint8[] calldata parents_weights, 
-        uint256 child,
-        uint8 child_weight
+        uint256[] calldata children_ids, 
+        uint8[] calldata children_weights
     )   external 
         returns (uint256);
 
     function setRevenueManager(address _revenueManager) external;
+
+    function setUserManager(address _userManager) external;
 
     function getOwnerId(uint256 asset_Id)
         external
@@ -39,7 +41,7 @@ interface IAssetManager {
     function getParentIds(uint256 asset_id) 
         external 
         view
-        returns (uint256[] memory, uint256[] memory);
+        returns (uint256[] memory);
 
     function getLatestAuctionId(uint256 asset_Id)
         external
@@ -60,7 +62,7 @@ interface IAssetManager {
             uint256,
             uint256,
             uint256,
-            uint8
+            uint256
         );
     
     function useAsset(uint256 asset_id, uint256 revenue)

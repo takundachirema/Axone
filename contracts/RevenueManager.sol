@@ -22,17 +22,23 @@ contract RevenueManager is Initializable {
 
     address registry;
 
+    // this maps the weights of each connection the asset has to it's children
+    mapping (uint256 => mapping (uint256 => uint8)) childrenWeights;
+
+    // this maps the weights of each connection the asset has to it's parents
+    mapping (uint256 => mapping (uint256 => uint8)) parentsWeights;
+
     // this maps the revenue receipts the asset got from its children
-    mapping (uint256 => mapping (uint256 => uint256)) childReceipts;
+    mapping (uint256 => mapping (uint256 => uint256)) childrenReceipts;
 
     // this maps the revenue receipts the asset got from its parents
-    mapping (uint256 => mapping (uint256 => uint256)) parentReceipts;
+    mapping (uint256 => mapping (uint256 => uint256)) parentsReceipts;
 
     // this maps the revenue payments the asset made to its children
-    mapping (uint256 => mapping (uint256 => uint256)) childPayments;
+    mapping (uint256 => mapping (uint256 => uint256)) childrenPayments;
 
     // this maps the revenue payments the asset made to its parents
-    mapping (uint256 => mapping (uint256 => uint256)) parentPayments;
+    mapping (uint256 => mapping (uint256 => uint256)) parentsPayments;
     
 
     IAssetManager private assetManager;
@@ -55,29 +61,29 @@ contract RevenueManager is Initializable {
     // make this one protected
     function createAccount(
         uint256 asset_id,
+        uint256[] memory parents_ids,
         uint8[] memory parents_weights,
+        uint256[] memory children_ids,
+        uint8[] memory children_weights,
         uint256 usage_price
     ) public {
-
-        uint8[] memory children_weights;
-        uint256[] memory parents_payments;
-        uint256[] memory children_payments;
-        uint256[] memory parents_receipts;
-        uint256[] memory children_receipts;
 
         if (usage_price == 0){
             usage_price = asset_usage_price;
         }
 
+        for (uint256 i =0; i< parents_ids.length; i++){
+            parentsWeights[asset_id][parents_ids[i]] = parents_weights[i];
+        }
+
+        for (uint256 i =0; i< children_ids.length; i++){
+            childrenWeights[asset_id][children_ids[i]] = children_weights[i];
+        }
+
         SharedStructs.RevenueAccount memory account = SharedStructs.RevenueAccount(
             asset_id,
-            parents_weights,
-            children_weights,
-            parents_payments,
-            children_payments,
-            parents_receipts,
-            children_receipts,
             usage_price,
+            0,
             0,
             0
         );
@@ -86,24 +92,92 @@ contract RevenueManager is Initializable {
     }
 
     // make this protected
-    function setParentWeight(uint256 asset_id, uint8 weight) public {
-        accounts[asset_id - 1].parents_weights.push(weight);
+    function setParentWeight(uint256 asset_id, uint256 parent_asset_id, uint8 weight) public {
+        parentsWeights[asset_id][parent_asset_id] = weight;
     }
 
-    function setChildWeight(uint256 asset_id, uint8 weight) public {
-        accounts[asset_id - 1].children_weights.push(weight);
+    function setChildWeight(uint256 asset_id, uint256 child_asset_id, uint8 weight) public {
+        childrenWeights[asset_id][child_asset_id] = weight;
     }
 
-    function getChildrenWeights(uint256 asset_id) public view returns(uint8[] memory){
-        return accounts[asset_id - 1].children_weights;
+    function getWeights(bool children, uint256 asset_id, uint256[] memory ids) public view returns(uint8[] memory){
+        uint8[] memory weights = new uint8[](ids.length);
+        for (uint256 i =0; i < ids.length; i++){
+            if (children){
+                weights[i] = childrenWeights[asset_id][ids[i]];
+            }
+            else {
+                weights[i] = parentsWeights[asset_id][ids[i]];
+            }
+        }
+        return weights;
     }
 
-    function getParentsWeights(uint256 asset_id) public view returns(uint8[] memory){
-        return accounts[asset_id - 1].parents_weights;
+    function getChildrenRevenues(
+        bool payments, 
+        uint256 asset_id, 
+        uint256[] memory ids
+    ) public view returns(uint256[] memory) {
+
+        uint256[] memory revenues = new uint256[](ids.length);
+        for (uint256 i =0; i < ids.length; i++){
+            if (payments){
+                revenues[i] = childrenPayments[asset_id][ids[i]];
+            }
+            else {
+                revenues[i] = childrenReceipts[asset_id][ids[i]];
+            }
+        }
+        return revenues; 
     }
 
-    function getRevenueAccount(uint256 asset_id) public view returns(SharedStructs.RevenueAccount memory){
-        return accounts[asset_id - 1];
+    function getParentRevenues(
+        bool payments, 
+        uint256 asset_id, 
+        uint256[] memory ids
+    ) public view returns(uint256[] memory) {
+        
+        uint256[] memory revenues = new uint256[](ids.length);
+        for (uint256 i =0; i < ids.length; i++){
+            if (payments){
+                revenues[i] = parentsPayments[asset_id][ids[i]];
+            }
+            else {
+                revenues[i] = parentsReceipts[asset_id][ids[i]];
+            }
+        }
+        return revenues; 
+    }
+
+    function getRevenueAccount(uint256 asset_id)
+        public view returns(SharedStructs.RevenueAccountDetails memory){
+
+        SharedStructs.RevenueAccount memory account = accounts[asset_id - 1];
+        uint256[] memory children_ids = assetManager.getChildrenIds(asset_id); 
+        uint256[] memory parent_ids = assetManager.getParentIds(asset_id);
+        
+        uint8[] memory parents_weights = getWeights(false, asset_id, parent_ids); 
+        uint8[] memory children_weights = getWeights(true, asset_id, children_ids); 
+        uint256[] memory parents_payments = getParentRevenues(true, asset_id, parent_ids);
+        uint256[] memory children_payments = getChildrenRevenues(true, asset_id, children_ids);
+        uint256[] memory parents_receipts = getParentRevenues(false, asset_id, parent_ids);
+        uint256[] memory children_receipts = getChildrenRevenues(false, asset_id, parent_ids);
+    
+        SharedStructs.RevenueAccountDetails memory accountDetails = SharedStructs.RevenueAccountDetails(
+            account.asset_id,
+            account.usage_price,
+            account.revenue,
+            account.net_revenue,
+            account.gross_revenue,
+            parents_weights,
+            children_weights,
+            parents_payments,
+            children_payments,
+            parents_receipts,
+            children_receipts
+        );
+
+        return accountDetails;
     }
 
     function payForAssetUse(uint256 asset_id) payable external {
@@ -116,7 +190,6 @@ contract RevenueManager is Initializable {
         }
 
         account.revenue = account.revenue.add(account.usage_price);
-        account.total_revenue = account.total_revenue.add(account.usage_price);
 
         emit PayForAssetUse(asset_id, true);
     }
@@ -124,43 +197,56 @@ contract RevenueManager is Initializable {
     function payRoyalties() public onlyRegistry {
         
         for (uint256 i =0; i < accounts.length; i++){
-            SharedStructs.RevenueAccount memory account = accounts[i];
+            SharedStructs.RevenueAccount storage account = accounts[i];
+            uint256 assetId = account.asset_id;
             if (account.revenue > 0) {
-                uint256[] memory childrenIds = assetManager.getChildrenIds(account.asset_id);
+                uint256[] memory childrenIds = assetManager.getChildrenIds(assetId);
+                uint256[] memory parentIds = assetManager.getParentIds(assetId);
+                uint256 totalRoyaltyPaid = 0;
+
                 for (uint256 j =0; j < childrenIds.length; j ++){
-                    uint256 weight = account.children_weights[j];
+                    uint256 childId = childrenIds[j];
+                    uint256 weight = childrenWeights[assetId][childId];
                     // Distribute revenue to adjacent nodes created before asset
                     // i.e. to adjacent nodes with id < asset_id
-                    if (childrenIds[j] < account.asset_id && weight > 0){
-                        uint256 royalty = account.revenue.mul(weight.div(100));
-                        address childAddress = assetManager.getOwnerAddress(childrenIds[j]);
-                        address payable wallet = address(uint160(childAddress));
-                        wallet.transfer(royalty);
+                    if (childId < assetId && weight > 0){
+                        uint256 rw = account.revenue.mul(weight);
+                        uint256 royalty = rw.div(100);
+                        address childAddress = assetManager.getOwnerAddress(childId);
+                        address payable child_wallet = address(uint160(childAddress));
+                        child_wallet.transfer(royalty);
+
+                        totalRoyaltyPaid = totalRoyaltyPaid + royalty;
+                        childrenPayments[assetId][childId] = childrenPayments[assetId][childId] + royalty;
+                        parentsReceipts[childId][assetId] = parentsReceipts[childId][assetId] + royalty;
                     }
                 }
-            }
-        }
-    }
 
-    function payRoyaltiesToAssets(
-        SharedStructs.RevenueAccount storage revenue_account, 
-        uint256[] memory assetIds
-    ) internal
-    {   
-        for (uint256 j =0; j < assetIds.length; j ++){
-            SharedStructs.RevenueAccount storage asset_account = accounts[assetIds[j] - 1];
-            uint256 weight = revenue_account.children_weights[j];
-            // Distribute revenue to adjacent nodes created before asset
-            // i.e. to adjacent nodes with id < asset_id
-            if (assetIds[j] < revenue_account.asset_id && weight > 0){
-                uint256 royalty = revenue_account.revenue.mul(weight.div(100));
-                address childAddress = assetManager.getOwnerAddress(assetIds[j]);
-                address payable wallet = address(uint160(childAddress));
-                wallet.transfer(royalty);
+                for (uint256 j =0; j < parentIds.length; j ++){
+                    uint256 parentId = parentIds[j];
+                    uint256 weight = parentsWeights[assetId][parentId];
+                    // Distribute revenue to adjacent nodes created before asset
+                    // i.e. to adjacent nodes with id < asset_id
+                    if (parentId < assetId && weight > 0){
+                        uint256 rw = account.revenue.mul(weight);
+                        uint256 royalty = rw.div(100);
+                        address parentAddress = assetManager.getOwnerAddress(parentId);
+                        address payable parent_wallet = address(uint160(parentAddress));
+                        parent_wallet.transfer(royalty);
 
-                revenue_account.children_payments[j] = revenue_account.children_payments[j].add(royalty);
-                uint256 parentPosition = assetManager.getParentPosition();
-                asset_account.parents_receipts[j] = revenue_account.children_payments[j].add(royalty);
+                        totalRoyaltyPaid = totalRoyaltyPaid + royalty;
+                        parentsPayments[assetId][parentId] = parentsPayments[assetId][parentId] + royalty;
+                        childrenReceipts[parentId][assetId] = childrenReceipts[parentId][assetId] + royalty;
+                    }
+                }
+
+                address accountAddress = assetManager.getOwnerAddress(assetId);
+                address payable asset_wallet = address(uint160(accountAddress));
+                asset_wallet.transfer(account.revenue - totalRoyaltyPaid);
+
+                account.net_revenue = account.net_revenue + account.revenue - totalRoyaltyPaid;
+                account.gross_revenue = account.gross_revenue + account.revenue;
+                account.revenue = 0;
             }
         }
     }

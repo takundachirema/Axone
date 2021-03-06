@@ -35,6 +35,7 @@ contract AxoneManager is Initializable {
         assetManager = IAssetManager(_assetManager);
         revenueManager.setAssetManager(_assetManager);
         assetManager.setRevenueManager(_revenueManager);
+        assetManager.setUserManager(_userManager);
     }
 
     function setOwner(address _owner) public {
@@ -53,8 +54,8 @@ contract AxoneManager is Initializable {
         uint256 asset_usage_price,
         uint256[] memory parents_ids, 
         uint8[] memory parents_weights, 
-        uint256 child_id,
-        uint8 child_weight
+        uint256[] memory children_ids, 
+        uint8[] memory children_weights
     ) public returns(uint256){
         require(isCallerRegistered(), "Cant create a asset if you are not registered");
         uint256 owner_id = getCallerId();
@@ -64,8 +65,8 @@ contract AxoneManager is Initializable {
             asset_usage_price,
             parents_ids, 
             parents_weights,
-            child_id, 
-            child_weight
+            children_ids,
+            children_weights
         );
 
         emit NewAsset(assetId, owner_id, asset_uri);
@@ -104,17 +105,15 @@ contract AxoneManager is Initializable {
             uint256,
             uint256,
             uint256,
-            uint8
+            uint256
         )
     {
         return (assetManager.getAsset(asset_Id));
     }
 
-    // function payForAsset(uint256 asset_id) external payable {
-    //     require(msg.value > 0, "No payment received for asset use.");
-    //     revenueManager.payForAsset(asset_id, msg.value);
-    //     emit PayForAssetUse(asset_id, true);
-    // }
+    function payRoyalties() public {
+        revenueManager.payRoyalties();
+    }
 
     function getCallerId() public view returns (uint256) {
         uint256 callerId = userManager.getUserId(msg.sender);
